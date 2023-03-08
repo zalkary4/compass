@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'dart:math' as math;
 
-// import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
+import 'package:permission_handler/permission_handler.dart';
 // import 'package:compassapp/neu_circle.dart';
 // import 'package:flutter/material.dart';
 // import 'package:flutter_compass/flutter_compass.dart';
@@ -27,51 +28,91 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _fetchPermissionStatus() {
-    Permission.locationWhenInUse.status.then((status) {
-      if (mounted) {
-        setState(() {
-          _hasPermissions = (status == PermissionStatus.granted);
-        });
-      }
-    });
+    Permission.locationWhenInUse.status.then(
+      (status) {
+        if (mounted) {
+          setState(() {
+            _hasPermissions = (status == PermissionStatus.granted);
+          });
+        }
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Scaffold(body: null
-          // Builder(builder: (context) {
-          //   if (_hasPermissions) {
-          //     return _buildCompass;
-          //   } else {
-          //     return _buildPermissionSheet();
-          //   }
-          // },
-          // ),
-          ),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) {
+            if (_hasPermissions) {
+              return _buildCompass();
+            } else {
+              return _buildCompass();
+            }
+          },
+        ),
+      ),
     );
   }
 
   ///  compass widget
   Widget _buildCompass() {
-    return const Center(
-      child: Text('Compass here'),
+    return StreamBuilder<CompassEvent>(
+      stream: FlutterCompass.events,
+      builder: (context, snapshot) {
+        // error msg
+        if (snapshot.hasError) {
+          return Text('Error reading heading: ${snapshot.error}');
+        }
+        // loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        double? direction = snapshot.data!.heading;
+
+        //if
+        if (direction == null) {
+          return const Center(
+            child: Text('Device does not have sensors'),
+          );
+        }
+
+        // return compass
+        return Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Transform.rotate(
+              angle: direction * (math.pi / 180) * -1,
+              child: Image.asset(
+                'lib/images/compass.png',
+                // color: Colors.black,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
   ///  permission widget
 
-  Widget _buildPermissionSheet() {
-    return Center(
-      child: ElevatedButton(
-        child: const Text('Reuest permission'),
-        onPressed: () {
-          Permission.locationWhenInUse.request().then((value) {
-            _fetchPermissionStatus();
-          });
-        },
-      ),
-    );
-  }
+  // Widget _buildPermissionSheet() {
+  //   return Center(
+  //     child: ElevatedButton(
+  //       child: const Text('Reuest permission'),
+  //       onPressed: () {
+  //         Permission.locationWhenInUse.request().then(
+  //           (value) {
+  //             _fetchPermissionStatus();
+  //           },
+  //         );
+  //       },
+  //     ),
+  //   );
+  // }
 }
